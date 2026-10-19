@@ -14,6 +14,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "analytics.observability.RequestLogMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
@@ -31,7 +32,7 @@ if os.environ.get("POSTGRES_HOST"):
             "USER": os.environ.get("POSTGRES_USER", "postgres"),
             "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
             "CONN_MAX_AGE": None,
-            "OPTIONS": {"application_name": "victim-service"},
+            "OPTIONS": {"application_name": "victim-service:raw"},
         }
     }
 else:
@@ -46,3 +47,34 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_TZ = True
+
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "analytics.observability.JsonFormatter",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": str(LOG_DIR / "app.log"),
+            "formatter": "json",
+        },
+    },
+    "loggers": {
+        "victim.request": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
